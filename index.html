@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Final GitHub Version</title>
+    <style>
+        :root {
+            --night-sky: radial-gradient(circle at 75% 15%, #0a192f 0%, #02060c 40%, #000 100%);
+            --mtn-back: #0a0f1a;
+            --mtn-front: #020408;
+        }
+
+        body { 
+            margin: 0; padding: 0; width: 100vw; height: 100dvh; overflow: hidden; 
+            background: var(--night-sky); position: relative; font-family: 'Georgia', serif; 
+            transition: background 12s ease-in-out;
+        }
+
+        body.sunrise-active {
+            background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 30%, #feb47b 70%, #ff7e5f 100%) !important;
+        }
+
+        /* 6:24 Screenshot Logic for Heading */
+        #topHeading {
+            position: absolute; top: 7%; left: 50%; transform: translateX(-50%);
+            color: white; font-size: 2.2rem; font-weight: bold; letter-spacing: 5px;
+            text-shadow: 0 0 25px rgba(255,255,255,0.8);
+            opacity: 0; transition: opacity 2.5s ease-in-out; z-index: 10;
+            pointer-events: none; text-align: center; width: 100%;
+        }
+
+        .sun {
+            position: absolute; bottom: -250px; left: 50%; transform: translateX(-50%);
+            width: 75px; height: 75px; 
+            background: radial-gradient(circle, #fff700 10%, #ff8c00 50%, #ff4500 100%);
+            border-radius: 50%; box-shadow: 0 0 40px #ff8c00; z-index: 4; 
+            transition: bottom 8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #messageArea {
+            position: absolute; bottom: 80px; right: 20px; text-align: right; 
+            color: #ffffff; font-size: 0.95rem; line-height: 1.5; z-index: 100;
+            font-style: italic; text-shadow: 2px 2px 10px rgba(0,0,0,1);
+            pointer-events: none; max-width: 70%;
+        }
+
+        .moon {
+            position: absolute; top: 40px; right: 60px; width: 55px; height: 55px;
+            background: #fefdf0; border-radius: 50%; 
+            box-shadow: 0 0 60px 20px rgba(255, 255, 255, 0.4);
+            z-index: 1; transition: all 3s ease-in-out;
+        }
+        .moon-center { right: 50% !important; transform: translateX(50%); }
+        .moon-fall { top: 120vh !important; transition: top 2.5s ease-in; }
+
+        .star {
+            position: absolute; width: 22px; height: 22px; background: white;
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            z-index: 100; cursor: pointer; filter: drop-shadow(0 0 12px white); display: none;
+        }
+
+        .mini-star {
+            position: absolute; background: white; border-radius: 50%; opacity: 0;
+            animation: twinkle var(--d) infinite ease-in-out; z-index: 0;
+        }
+        @keyframes twinkle { 0%, 100% { opacity: 0.2; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.2); } }
+
+        @keyframes shootToGround { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(-40px, 60vh) scale(0.2); opacity: 0; } }
+
+        .mountain-stage { position: absolute; bottom: -100%; width: 100%; height: 100%; z-index: 5; transition: bottom 2.5s ease-out; pointer-events: none; }
+        .show-mtn { bottom: 0 !important; }
+        svg { position: absolute; bottom: 0; width: 100%; }
+        .mtn-back-layer { fill: var(--mtn-back); filter: blur(3px); }
+        .mtn-front-layer { fill: var(--mtn-front); }
+
+        canvas { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; display: block; }
+        #treeCanvas { z-index: 8; pointer-events: none; }
+        #grassCanvas { z-index: 20; pointer-events: none; opacity: 0; transition: opacity 2s; }
+        #natureCanvas { z-index: 25; pointer-events: none; }
+    </style>
+</head>
+<body id="sky">
+
+    <audio id="bgMusic" loop>
+        <source src="song.mp3.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="topHeading">GOOD MORNING</div>
+    <div id="sun" class="sun"></div>
+    <div id="moon" class="moon"></div>
+    <div id="messageArea"></div>
+
+    <div id="s1" class="star" style="left: 45%; top: 40%; display: block;" onclick="trigger(this, 'start')"></div>
+    <div id="s2" class="star" style="left: 10%; top: 20%;" onclick="trigger(this, 'grass')"></div>
+    <div id="s3" class="star" style="left: 70%; top: 15%;" onclick="trigger(this, 'mtn')"></div>
+    <div id="s4" class="star" style="left: 25%; top: 35%;" onclick="trigger(this, 'moon')"></div>
+
+    <div id="mtn" class="mountain-stage">
+        <svg viewBox="0 0 1440 600" preserveAspectRatio="none" style="height: 85%;">
+            <path class="mtn-back-layer" d="M0,600 L0,300 C150,150 350,450 450,250 C600,50 840,400 950,200 C1100,50 1250,150 1440,300 L1440,600 Z"></path>
+        </svg>
+        <svg viewBox="0 0 1440 500" preserveAspectRatio="none" style="height: 70%; bottom: 0;">
+            <path class="mtn-front-layer" d="M0,500 L0,420 C100,350 250,450 400,320 C550,150 750,450 900,280 C1100,100 1300,350 1440,420 L1440,500 Z"></path>
+        </svg>
+    </div>
+
+    <canvas id="treeCanvas"></canvas>
+    <canvas id="grassCanvas"></canvas>
+    <canvas id="natureCanvas"></canvas>
+
+<script>
+    const tCanvas = document.getElementById('treeCanvas');
+    const tCtx = tCanvas.getContext('2d');
+    const gCanvas = document.getElementById('grassCanvas');
+    const gCtx = gCanvas.getContext('2d');
+    const nCanvas = document.getElementById('natureCanvas');
+    const nCtx = nCanvas.getContext('2d');
+    const bgMusic = document.getElementById('bgMusic');
+
+    let natureItems = [];
+
+    function resize() {
+        tCanvas.width = gCanvas.width = nCanvas.width = window.innerWidth;
+        tCanvas.height = gCanvas.height = nCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Star Generation
+    for(let i=0; i<50; i++) {
+        const ms = document.createElement('div');
+        ms.className = 'mini-star';
+        ms.style.left = Math.random()*100+'%';
+        ms.style.top = Math.random()*50+'%';
+        ms.style.width = ms.style.height = Math.random()*2+1+'px';
+        ms.style.setProperty('--d', Math.random()*3+2+'s');
+        document.body.appendChild(ms);
+    }
+
+    function trigger(el, type) {
+        // Music Trigger
+        if (bgMusic.paused) {
+            bgMusic.play().catch(e => console.log("Music click ke baad shuru hoga"));
+        }
+
+        el.style.animation = "shootToGround 0.7s forwards ease-in";
+        el.addEventListener('animationend', () => {
+            el.style.display = 'none';
+            if(type === 'start') { 
+                document.querySelectorAll('.mini-star').forEach(s => s.style.opacity = '1');
+                setTimeout(() => { document.getElementById('s2').style.display = 'block'; }, 800);
+            }
+            if(type === 'grass') { 
+                document.getElementById('grassCanvas').style.opacity = '1'; 
+                // 6:24 Screenshot Tree Position (Exact Bottom)
+                drawTree(tCanvas.width * 0.2, tCanvas.height, -90, 8, 9); 
+                for(let i=0; i<12; i++) natureItems.push(new Firefly());
+                animateNature();
+                setTimeout(() => { document.getElementById('s3').style.display = 'block'; }, 1500);
+            }
+            if(type === 'mtn') { 
+                document.getElementById('mtn').classList.add('show-mtn'); 
+                setTimeout(() => { document.getElementById('s4').style.display = 'block'; }, 2500);
+            }
+            if(type === 'moon') {
+                const moon = document.getElementById('moon');
+                moon.classList.add('moon-center');
+                setTimeout(() => {
+                    moon.classList.add('moon-fall');
+                    setTimeout(triggerSunrise, 2000);
+                }, 3000);
+            }
+        }, {once: true});
+    }
+
+    function triggerSunrise() {
+        document.getElementById('sky').classList.add('sunrise-active');
+        document.getElementById('sun').style.bottom = '52%';
+        document.querySelectorAll('.mini-star').forEach(s => s.style.opacity = '0');
+        natureItems = [];
+        for(let i=0; i<6; i++) natureItems.push(new Butterfly());
+        const heading = document.getElementById('topHeading');
+        heading.style.opacity = '1';
+        setTimeout(() => { heading.style.opacity = '0'; }, 5000); 
+        setTimeout(typeMessage, 1000);
+    }
+
+    function drawTree(x1, y1, angle, depth, thickness) {
+        if (depth <= 0) return;
+        const len = depth * (Math.random() * 2 + 5.5); 
+        const x2 = x1 + (Math.cos(angle * Math.PI / 180) * len);
+        const y2 = y1 + (Math.sin(angle * Math.PI / 180) * len);
+        tCtx.beginPath(); tCtx.moveTo(x1, y1);
+        tCtx.quadraticCurveTo(x1 + (Math.random()*4-2), y1-len/2, x2, y2);
+        tCtx.strokeStyle = `rgba(30, 20, 15, ${depth/8 + 0.3})`;
+        tCtx.lineWidth = thickness; tCtx.lineCap = 'round'; tCtx.stroke();
+        if (depth < 6 && Math.random() > 0.4) {
+            for(let i = 0; i < (6-depth)*2; i++) drawRedFlower(x2 + (Math.random()*15 - 7.5), y2 + (Math.random()*15 - 7.5));
+        }
+        setTimeout(() => {
+            drawTree(x2, y2, angle - (Math.random() * 25 + 10), depth - 1, thickness * 0.7);
+            drawTree(x2, y2, angle + (Math.random() * 25 + 10), depth - 1, thickness * 0.7);
+        }, 50);
+    }
+
+    function drawRedFlower(x, y) {
+        tCtx.save(); tCtx.globalAlpha = 0.7;
+        tCtx.fillStyle = ['#8b0000', '#b22222', '#ff0000'][Math.floor(Math.random()*3)];
+        tCtx.beginPath(); tCtx.ellipse(x, y, Math.random()*3+2, Math.random()*2+1, Math.random()*Math.PI, 0, Math.PI*2);
+        tCtx.fill(); tCtx.restore();
+    }
+
+    class Firefly {
+        constructor() { this.x = Math.random()*nCanvas.width; this.y = Math.random()*nCanvas.height; this.ang = Math.random()*Math.PI*2; }
+        update() {
+            this.ang += 0.05; this.x += Math.cos(this.ang)*0.8; this.y += Math.sin(this.ang)*0.5;
+            nCtx.beginPath(); nCtx.fillStyle = `rgba(255, 255, 150, ${Math.abs(Math.sin(this.ang))})`;
+            nCtx.arc(this.x, this.y, 1.2, 0, Math.PI*2); nCtx.fill();
+        }
+    }
+    class Butterfly {
+        constructor() { this.x = Math.random()*nCanvas.width; this.y = Math.random()*nCanvas.height; this.vx = Math.random()*2-1; this.vy = Math.random()*1-0.5; }
+        update() {
+            this.x += this.vx; this.y += this.vy; if(this.x<0 || this.x>nCanvas.width) this.vx*=-1;
+            nCtx.fillStyle = "#ffcc00"; nCtx.beginPath(); let flap = Math.sin(Date.now()*0.01)*4;
+            nCtx.ellipse(this.x-2, this.y, 3, 5+flap, 0.2, 0, Math.PI*2); nCtx.ellipse(this.x+2, this.y, 3, 5+flap, -0.2, 0, Math.PI*2); nCtx.fill();
+        }
+    }
+    function animateNature() { nCtx.clearRect(0,0,nCanvas.width,nCanvas.height); natureItems.forEach(item => item.update()); requestAnimationFrame(animateNature); }
+
+    function typeMessage() {
+        const fullMsg = "Welcome to the\nfresh morning,\nWith a smile on your face;\nLove in your heart;\nGood thoughts in your mind;\nAnd you will have a\nwonderful day!";
+        let i = 0; const area = document.getElementById('messageArea');
+        function typing() { if (i < fullMsg.length) { area.innerHTML += fullMsg.charAt(i) === "\n" ? "<br>" : fullMsg.charAt(i); i++; setTimeout(typing, 65); } }
+        typing();
+    }
+
+    let grassArr = [];
+    function initGrass() { 
+        grassArr = [];
+        for(let i=0; i < gCanvas.width*1.1; i++) grassArr.push({ x: Math.random()*gCanvas.width, ht: Math.random()*12+8, a: Math.random()*Math.PI, s: 0.02 }); 
+    }
+    function animateGrass() {
+        gCtx.clearRect(0, 0, gCanvas.width, gCanvas.height);
+        grassArr.forEach(b => {
+            b.a += b.s; let tx = b.x + Math.sin(b.a) * 3; 
+            let grad = gCtx.createLinearGradient(b.x, gCanvas.height, tx, gCanvas.height - b.ht);
+            grad.addColorStop(0, '#010502'); grad.addColorStop(1, '#4dfc8f'); 
+            gCtx.beginPath(); gCtx.strokeStyle = grad; gCtx.lineWidth = 1;
+            gCtx.moveTo(b.x, gCanvas.height); gCtx.quadraticCurveTo(b.x, gCanvas.height - b.ht/2, tx, gCanvas.height - b.ht); gCtx.stroke();
+        });
+        requestAnimationFrame(animateGrass);
+    }
+    initGrass(); animateGrass();
+</script>
+</body>
+</html>
